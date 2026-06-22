@@ -597,20 +597,6 @@ class CadastroManager {
 
         const formData = new FormData(event.target);
         
-        // Validar tags obrigatórias
-        const tags = formData.getAll('tags');
-        if (tags.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Histórico Criminal obrigatório',
-                text: 'Por favor, selecione pelo menos um tipo de crime/característica',
-                background: '#1a1a1a',
-                color: '#e0e0e0',
-                confirmButtonColor: '#00d4ff'
-            });
-            return;
-        }
-        
         // Verificar duplicatas antes de prosseguir (exceto se estiver editando)
         if (!this.editingRecordId) {
             const nome = formData.get('nome_completo');
@@ -1083,7 +1069,7 @@ class CadastroManager {
         container.innerHTML = pageResults.map(result => {
             const meta = result.metadata;
             const date = new Date(result.createdTime).toLocaleString('pt-BR');
-            const tags = meta.tags && meta.tags.length > 0 ? meta.tags.join(', ') : 'Sem histórico criminal';
+            const tags = meta.tags && meta.tags.length > 0 ? meta.tags.join(', ') : 'Sem ocorrências registradas';
             
             return `
                 <div class="consulta-result-card-compact">
@@ -1222,7 +1208,7 @@ class CadastroManager {
         document.getElementById('details-data-cadastro').textContent = new Date(result.createdTime).toLocaleString('pt-BR');
         
         // Exibir tags
-        const tagsText = meta.tags && meta.tags.length > 0 ? meta.tags.join(', ') : 'Sem histórico criminal';
+        const tagsText = meta.tags && meta.tags.length > 0 ? meta.tags.join(', ') : 'Sem ocorrências registradas';
         const tagsElement = document.getElementById('details-tags');
         if (tagsElement) {
             tagsElement.textContent = tagsText;
@@ -1431,7 +1417,7 @@ class CadastroManager {
                     </div>
                     ` : `
                     <div style="padding:var(--space-3); background:var(--color-surface); border-radius:var(--radius-md); color:var(--color-text-tertiary); font-size:var(--font-size-sm);">
-                        ℹ️ Este cadastro não possui histórico criminal registrado
+                        ℹ️ Este cadastro não possui ocorrências registradas
                     </div>
                     `}
                 </div>
