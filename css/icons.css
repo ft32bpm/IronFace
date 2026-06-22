@@ -1,0 +1,18 @@
+/* Estilos para ícones Lucide */
+i[data-lucide] {
+    display: inline-block;
+    vertical-align: middle;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.drive-status i[data-lucide] {
+    margin-right: 6px;
+}
+
+.empty-state-icon i[data-lucide] {
+    opacity: 0.5;
+}

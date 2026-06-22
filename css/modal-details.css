@@ -1,0 +1,255 @@
+/* Modal de Detalhes - Material Design 3 Enhanced */
+
+/* Estilos para botões de editar e excluir */
+.btn-edit-record,
+.btn-delete-record {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.btn-edit-record:hover {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: rgba(0, 212, 255, 0.3);
+    color: var(--color-accent);
+    transform: scale(1.05);
+}
+
+.btn-delete-record:hover {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: rgba(248, 81, 73, 0.3);
+    color: var(--color-error);
+    transform: scale(1.05);
+}
+
+/* Melhorias no layout do modal */
+#details-modal .modal-header {
+    background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+    border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+    padding: var(--space-5) var(--space-6);
+}
+
+#details-modal .modal-title {
+    color: var(--color-accent);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+#details-modal .modal-footer {
+    background: var(--color-surface-elevated);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: var(--space-4) var(--space-6);
+    justify-content: flex-end;
+}
+
+/* Ícones nas seções */
+#details-modal .details-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.3) 0%, transparent 100%);
+    margin-left: var(--space-3);
+}
+
+/* Destaque para campos importantes */
+#details-modal .details-field[data-important="true"] {
+    background: rgba(0, 212, 255, 0.05);
+    border-color: rgba(0, 212, 255, 0.15);
+}
+
+#details-modal .details-field[data-important="true"] .details-label {
+    color: var(--color-accent);
+}
+
+/* Animação suave ao abrir modal */
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+#details-modal.modal-backdrop.active .modal {
+    animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scrollbar customizada para o modal */
+#details-modal .modal-body-details::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+#details-modal .modal-body-details::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+#details-modal .modal-body-details::-webkit-scrollbar-thumb {
+    background: rgba(0, 212, 255, 0.4);
+    border-radius: 5px;
+}
+
+#details-modal .modal-body-details::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 212, 255, 0.6);
+}
+
+/* Garantir que o conteúdo seja totalmente visível */
+#details-modal .details-info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* Espaçamento adicional no final para garantir visibilidade */
+#details-modal .details-info-section::after {
+    content: '';
+    display: block;
+    height: var(--space-4);
+}
+
+/* Efeito de foco na imagem */
+#details-modal .details-face-image {
+    filter: brightness(0.95);
+}
+
+#details-modal .details-face-image:hover {
+    filter: brightness(1);
+}
+
+/* Badge de status para campos vazios */
+#details-modal .details-value:empty::after,
+#details-modal .details-value:contains("N/A")::after {
+    content: 'Não informado';
+    color: var(--color-text-tertiary);
+    font-style: italic;
+    font-size: 12px;
+}
+
+/* Melhor espaçamento entre seções */
+#details-modal .details-section + .details-section {
+    margin-top: var(--space-5);
+}
+
+/* Indicador visual para campos copiáveis */
+#details-modal .details-value:has(+ .btn-copy-field) {
+    font-family: var(--font-family-mono, 'Courier New', monospace);
+    letter-spacing: 0.5px;
+}
+
+/* Responsividade aprimorada */
+@media (max-width: 768px) {
+    #details-modal .modal-large {
+        max-width: 100%;
+        width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    #details-modal .modal-header,
+    #details-modal .modal-footer {
+        padding: var(--space-4);
+    }
+    
+    #details-modal .details-info-section {
+        padding: var(--space-4);
+    }
+    
+    #details-modal .details-section-title {
+        font-size: 12px;
+    }
+    
+    #details-modal .modal-body-details {
+        max-height: calc(100vh - 140px);
+    }
+}
+
+/* Garantir altura mínima para o modal body */
+#details-modal .modal-body-details {
+    min-height: 400px;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+}
+
+/* Garantir que o layout interno não ultrapasse o container */
+#details-modal .details-layout {
+    min-height: fit-content;
+}
+
+/* Ajuste para garantir scroll suave */
+#details-modal .modal-body-details {
+    scroll-behavior: smooth;
+}
+
+/* Indicador visual de mais conteúdo abaixo */
+#details-modal .details-info-section::before {
+    content: '';
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(180deg, var(--color-surface) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
+    margin-bottom: calc(var(--space-3) * -1);
+}
+
+/* Efeito de hover suave nos campos */
+#details-modal .details-field {
+    position: relative;
+    overflow: hidden;
+}
+
+#details-modal .details-field::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-primary) 100%);
+    transform: scaleY(0);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#details-modal .details-field:hover::before {
+    transform: scaleY(1);
+}
+
+/* Tooltip para botões */
+.btn-copy-field[title],
+.btn-edit-record[title],
+.btn-delete-record[title] {
+    position: relative;
+}
+
+.btn-copy-field[title]:hover::after,
+.btn-edit-record[title]:hover::after,
+.btn-delete-record[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    font-size: 11px;
+    white-space: nowrap;
+    border-radius: 6px;
+    pointer-events: none;
+    z-index: 1000;
+}

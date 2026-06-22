@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IronFace - Sistema Biométrico Forense</title>
+    <link rel="stylesheet" href="css/design-system.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/modules.css">
+    <link rel="stylesheet" href="css/cadastro.css">
+    <link rel="stylesheet" href="css/modal-details.css">
+    <link rel="stylesheet" href="css/compatibility.css">
+    <link rel="stylesheet" href="css/icons.css">
+    <link rel="stylesheet" href="css/optimization.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div id="global-progress" class="global-progress-container">
+        <div class="global-progress-bar">
+            <div id="global-progress-fill" class="global-progress-fill"></div>
+        </div>
+        <div class="global-progress-text">
+            <span id="global-progress-text">0%</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-brand">
+                    <img src="logo/logo.png" alt="IronFace Logo" class="header-logo">
+                    <div class="header-title">
+                        <h1>IronFace</h1>
+                        <p>Sistema de Reconhecimento Facial Forense</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <div class="status-group">
+                        <div class="status-item" id="model-status-container">
+                            <i data-lucide="cpu" class="status-icon"></i>
+                            <div class="status-content">
+                                <span class="status-label">Modelos IA</span>
+                                <span id="model-status" class="status-value">Carregando...</span>
+                            </div>
+                        </div>
+                        <div class="status-divider"></div>
+                        <div class="status-item" id="drive-status-container">
+                            <i data-lucide="cloud" class="status-icon"></i>
+                            <div class="status-content">
+                                <span class="status-label">Google Drive</span>
+                                <span id="drive-status-unified" class="status-value">Não conectado</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="comparison">Triagem de Candidatos</button>
+            <button class="tab-btn" data-tab="pessoas">Cadastro de Pessoas</button>
+            <button class="tab-btn" data-tab="cadastro">Buscar Cadastros</button>
+            <button class="tab-btn" data-tab="configuracoes">Configurações</button>
+        </div>
+
+        <div id="comparison-tab" class="tab-content active">
+            <div class="panel-layout">
+                <aside class="panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">Banco de Dados</h3>
+                    </div>
+                    <div class="panel-body">
+                        <button id="load-database" class="btn btn-primary btn-block">Carregar do Google Drive</button>
+                        <div class="db-info-card" style="margin-top:var(--space-3); background:rgba(0,212,255,0.03); border:1px solid rgba(0,212,255,0.12); border-radius:var(--radius-sm); padding:var(--space-2); text-align:center;">
+                            <div style="font-size:10px; color:var(--color-text-tertiary); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.3px;">Banco de Dados</div>
+                            <div class="db-count" id="db-count" style="font-size:var(--font-size-base); font-weight:600; color:var(--color-primary); line-height:1;">0</div>
+                            <div class="db-label" style="font-size:10px; color:var(--color-text-tertiary); margin-top:2px;">imagens carregadas</div>
+                        </div>
+                        <div id="db-list" class="file-list" style="margin-top:var(--space-4);"></div>
+                    </div>
+                </aside>
+
+                <main class="panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">Imagem de Consulta</h3>
+                    </div>
+                    <div class="panel-body">
+                        <input type="file" id="query-image" accept="image/*" multiple webkitdirectory directory style="display:none">
+                        <button id="select-query" class="btn btn-primary btn-block" style="margin-bottom:var(--space-4);">Selecionar Imagens/Diretório</button>
+                        <div id="query-preview" class="image-preview-container"></div>
+                        
+                        <div class="divider"></div>
+                        
+                        <h4 style="font-size:var(--font-size-base); margin-bottom:var(--space-3); color:var(--color-text-primary);">Parâmetros</h4>
+                        <div class="grid grid-cols-3 gap-3" style="margin-bottom:var(--space-3);">
+                            <div class="form-group">
+                                <label class="form-label">Score mínimo (%)</label>
+                                <input type="number" id="threshold" value="82" min="0" max="100" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Mostrar acima (%)</label>
+                                <input type="number" id="min-similarity" value="65" min="0" max="100" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Distância máxima</label>
+                                <input type="number" id="max-distance" value="0.52" min="0.35" max="0.75" step="0.01" class="form-input">
+                            </div>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:var(--space-2); font-size:var(--font-size-sm); color:var(--color-text-secondary); margin-bottom:var(--space-4); cursor:pointer;">
+                            <input type="checkbox" id="hide-landmarks" style="width:16px; height:16px;">
+                            <span>Ocultar landmarks na análise individual</span>
+                        </label>
+                        <button id="compare-btn" class="btn btn-accent btn-block btn-lg" disabled>Gerar Candidatos</button>
+                    </div>
+                </main>
+
+                <aside class="panel">
+                    <div class="panel-header">
+                        <h3 class="panel-title">Candidatos</h3>
+                    </div>
+                    <div class="panel-body">
+                        <div id="results-info" class="alert alert-info" style="margin-bottom:var(--space-4);">Aguardando comparação...</div>
+                        <div id="results-list" class="results-container"></div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+        <div id="pessoas-tab" class="tab-content">
+            <div class="card" style="max-width: 900px; margin: 0 auto;">
+                <div class="card-header">
+                    <h3 style="margin:0;">Cadastrar Pessoa</h3>
+                </div>
+                <div class="card-body">
+                <form id="cadastro-form" class="cadastro-form">
+                            <div class="auto-fill-section">
+                                <label class="form-section-title">Preenchimento Automático</label>
+                                <button type="button" class="btn btn-primary btn-block" id="toggle-auto-fill-btn" style="margin-bottom: var(--space-3);">Ativar Preenchimento Automático</button>
+                            </div>
+
+                            <div class="foto-upload">
+                                <label class="form-section-title">Foto do Abordado</label>
+                                <div id="foto-preview">
+                                    <div class="empty-preview">Nenhuma foto selecionada</div>
+                                </div>
+                                <input type="file" id="foto-input" accept="image/*" style="display:none;">
+                                <button type="button" class="btn-upload" onclick="document.getElementById('foto-input').click()">Selecionar Foto</button>
+                            </div>
+
+                            <div>
+                                <div class="form-section-title">Dados Pessoais</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Nome Completo *</label>
+                                        <input type="text" name="nome_completo" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Alcunha</label>
+                                        <input type="text" name="alcunha">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>RG *</label>
+                                        <input type="text" name="rg" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>CPF *</label>
+                                        <input type="text" name="cpf" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Data de Nascimento *</label>
+                                        <input type="date" name="data_nascimento" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Filiação - Mãe</label>
+                                        <input type="text" name="filiacao_mae">
+                                    </div>
+                                </div>
+                                <div class="form-row single">
+                                    <div class="form-group">
+                                        <label>Filiação - Pai</label>
+                                        <input type="text" name="filiacao_pai">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="form-section-title">Endereço</div>
+                                <div class="form-row single">
+                                    <div class="form-group">
+                                        <label>Logradouro</label>
+                                        <input type="text" name="logradouro" placeholder="Rua, Av, número">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Bairro</label>
+                                        <input type="text" name="bairro">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Cidade *</label>
+                                        <input type="text" name="cidade" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Estado</label>
+                                        <select name="estado">
+                                            <option value="">Selecione</option>
+                                            <option value="AC">AC</option>
+                                            <option value="AL">AL</option>
+                                            <option value="AP">AP</option>
+                                            <option value="AM">AM</option>
+                                            <option value="BA">BA</option>
+                                            <option value="CE">CE</option>
+                                            <option value="DF">DF</option>
+                                            <option value="ES">ES</option>
+                                            <option value="GO">GO</option>
+                                            <option value="MA">MA</option>
+                                            <option value="MT">MT</option>
+                                            <option value="MS">MS</option>
+                                            <option value="MG">MG</option>
+                                            <option value="PA">PA</option>
+                                            <option value="PB">PB</option>
+                                            <option value="PR">PR</option>
+                                            <option value="PE">PE</option>
+                                            <option value="PI">PI</option>
+                                            <option value="RJ">RJ</option>
+                                            <option value="RN">RN</option>
+                                            <option value="RS">RS</option>
+                                            <option value="RO">RO</option>
+                                            <option value="RR">RR</option>
+                                            <option value="SC">SC</option>
+                                            <option value="SP">SP</option>
+                                            <option value="SE">SE</option>
+                                            <option value="TO">TO</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>CEP</label>
+                                        <input type="text" name="cep" placeholder="00000-000">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="form-section-title">Características Físicas</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Altura</label>
+                                        <input type="text" name="altura" placeholder="Ex: 1.75m">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Cor da Pele</label>
+                                        <select name="cor_pele">
+                                            <option value="">Selecione</option>
+                                            <option value="Branca">Branca</option>
+                                            <option value="Parda">Parda</option>
+                                            <option value="Preta">Preta</option>
+                                            <option value="Amarela">Amarela</option>
+                                            <option value="Indígena">Indígena</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Cor dos Olhos</label>
+                                        <select name="cor_olhos">
+                                            <option value="">Selecione</option>
+                                            <option value="Castanhos">Castanhos</option>
+                                            <option value="Pretos">Pretos</option>
+                                            <option value="Azuis">Azuis</option>
+                                            <option value="Verdes">Verdes</option>
+                                            <option value="Mel">Mel</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Tatuagens</label>
+                                        <input type="text" name="tatuagens" placeholder="Descrição e localização">
+                                    </div>
+                                </div>
+                                <div class="form-row single">
+                                    <div class="form-group">
+                                        <label>Sinais Particulares</label>
+                                        <textarea name="sinais_particulares" placeholder="Cicatrizes, marcas, etc."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="form-section-title">Dados da Abordagem</div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Data da Abordagem</label>
+                                        <input type="date" name="data_abordagem">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Policial Responsável</label>
+                                        <input type="text" name="policial_responsavel">
+                                    </div>
+                                </div>
+                                <div class="form-row single">
+                                    <div class="form-group">
+                                        <label>Local da Abordagem</label>
+                                        <input type="text" name="local_abordagem" placeholder="Endereço completo">
+                                    </div>
+                                </div>
+                                <div class="form-row single">
+                                    <div class="form-group">
+                                        <label>Local do Cadastro</label>
+                                        <input type="text" name="local_cadastro" placeholder="Ex: 32º BPM - Força Tática">
+                                    </div>
+                                </div>
+                                <div class="form-row single">
+                                    <div class="form-group">
+                                        <label>Observações</label>
+                                        <textarea name="observacoes" placeholder="Informações adicionais sobre a abordagem"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="form-section-title">Histórico Criminal / Tags</div>
+                                <div class="form-row single">
+                                    <div class="form-group">
+                                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-2); margin-top:var(--space-2);">
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Homicídio" style="width:18px; height:18px;">
+                                                <span>Homicídio</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Latrocínio" style="width:18px; height:18px;">
+                                                <span>Latrocínio</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Roubo" style="width:18px; height:18px;">
+                                                <span>Roubo</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Roubo de Veículo" style="width:18px; height:18px;">
+                                                <span>Roubo de Veículo</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Furto" style="width:18px; height:18px;">
+                                                <span>Furto</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Furto de Veículo" style="width:18px; height:18px;">
+                                                <span>Furto de Veículo</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Furto Qualificado" style="width:18px; height:18px;">
+                                                <span>Furto Qualificado</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Tráfico de Drogas" style="width:18px; height:18px;">
+                                                <span>Tráfico de Drogas</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Porte de Drogas" style="width:18px; height:18px;">
+                                                <span>Porte de Drogas</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Porte de Arma" style="width:18px; height:18px;">
+                                                <span>Porte de Arma</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Receptação" style="width:18px; height:18px;">
+                                                <span>Receptação</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Estelionato" style="width:18px; height:18px;">
+                                                <span>Estelionato</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Extorsão" style="width:18px; height:18px;">
+                                                <span>Extorsão</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Sequêstro" style="width:18px; height:18px;">
+                                                <span>Sequêstro</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Lesão Corporal" style="width:18px; height:18px;">
+                                                <span>Lesão Corporal</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Ameaça" style="width:18px; height:18px;">
+                                                <span>Ameaça</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Violência Doméstica" style="width:18px; height:18px;">
+                                                <span>Violência Doméstica</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Dano" style="width:18px; height:18px;">
+                                                <span>Dano</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Desobediência" style="width:18px; height:18px;">
+                                                <span>Desobediência</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Desacato" style="width:18px; height:18px;">
+                                                <span>Desacato</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Resistência" style="width:18px; height:18px;">
+                                                <span>Resistência</span>
+                                            </label>
+                                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                                <input type="checkbox" name="tags" value="Outros" style="width:18px; height:18px;">
+                                                <span>Outros</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                    <button type="submit" id="submit-btn" class="btn btn-accent btn-block btn-lg">Cadastrar no Google Drive</button>
+                </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="cadastro-tab" class="tab-content">
+            <div class="two-column-layout">
+                <div class="sidebar">
+                    <h3 style="font-size:var(--font-size-lg); margin-bottom:var(--space-4);">Filtros de Busca</h3>
+                    
+                    <div class="sidebar-section">
+                        <h4 class="sidebar-section-title">Identificação</h4>
+                        <div class="form-group">
+                            <label>Nome</label>
+                            <input type="text" id="filtro-nome" placeholder="Nome completo ou parcial">
+                        </div>
+                        <div class="form-group">
+                            <label>CPF</label>
+                            <input type="text" id="filtro-cpf" placeholder="000.000.000-00">
+                        </div>
+                        <div class="form-group">
+                            <label>RG</label>
+                            <input type="text" id="filtro-rg" placeholder="Número do RG">
+                        </div>
+                        <div class="form-group">
+                            <label>Alcunha</label>
+                            <input type="text" id="filtro-alcunha" placeholder="Apelido">
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section">
+                        <h4 class="sidebar-section-title">Localização</h4>
+                        <div class="form-group">
+                            <label>Bairro</label>
+                            <input type="text" id="filtro-bairro" placeholder="Nome do bairro">
+                        </div>
+                        <div class="form-group">
+                            <label>Cidade</label>
+                            <input type="text" id="filtro-cidade" placeholder="Nome da cidade">
+                        </div>
+                        <div class="form-group">
+                            <label>Estado</label>
+                            <select id="filtro-estado">
+                                <option value="">Todos</option>
+                                <option value="AC">AC</option>
+                                <option value="AL">AL</option>
+                                <option value="AM">AM</option>
+                                <option value="BA">BA</option>
+                                <option value="CE">CE</option>
+                                <option value="DF">DF</option>
+                                <option value="ES">ES</option>
+                                <option value="GO">GO</option>
+                                <option value="MA">MA</option>
+                                <option value="MG">MG</option>
+                                <option value="MS">MS</option>
+                                <option value="MT">MT</option>
+                                <option value="PA">PA</option>
+                                <option value="PB">PB</option>
+                                <option value="PE">PE</option>
+                                <option value="PI">PI</option>
+                                <option value="PR">PR</option>
+                                <option value="RJ">RJ</option>
+                                <option value="RN">RN</option>
+                                <option value="RO">RO</option>
+                                <option value="RR">RR</option>
+                                <option value="RS">RS</option>
+                                <option value="SC">SC</option>
+                                <option value="SE">SE</option>
+                                <option value="SP">SP</option>
+                                <option value="TO">TO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section">
+                        <h4 class="sidebar-section-title">Características</h4>
+                        <div class="form-group">
+                            <label>Cor da Pele</label>
+                            <select id="filtro-cor-pele">
+                                <option value="">Todas</option>
+                                <option value="Branca">Branca</option>
+                                <option value="Parda">Parda</option>
+                                <option value="Preta">Preta</option>
+                                <option value="Amarela">Amarela</option>
+                                <option value="Indígena">Indígena</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Cor dos Olhos</label>
+                            <select id="filtro-cor-olhos">
+                                <option value="">Todas</option>
+                                <option value="Castanhos">Castanhos</option>
+                                <option value="Pretos">Pretos</option>
+                                <option value="Azuis">Azuis</option>
+                                <option value="Verdes">Verdes</option>
+                                <option value="Mel">Mel</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tatuagens</label>
+                            <input type="text" id="filtro-tatuagens" placeholder="Descrição">
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section">
+                        <h4 class="sidebar-section-title">Período</h4>
+                        <div class="form-group">
+                            <label>Data Inicial</label>
+                            <input type="date" id="filtro-data-inicio">
+                        </div>
+                        <div class="form-group">
+                            <label>Data Final</label>
+                            <input type="date" id="filtro-data-fim">
+                        </div>
+                    </div>
+
+                    <div class="sidebar-section">
+                        <h4 class="sidebar-section-title">Histórico Criminal</h4>
+                        <div class="form-group">
+                            <label>Filtrar por Crime</label>
+                            <select id="filtro-tag">
+                                <option value="">Todos</option>
+                                <option value="Homicídio">Homicídio</option>
+                                <option value="Latrocínio">Latrocínio</option>
+                                <option value="Roubo">Roubo</option>
+                                <option value="Roubo de Veículo">Roubo de Veículo</option>
+                                <option value="Furto">Furto</option>
+                                <option value="Furto de Veículo">Furto de Veículo</option>
+                                <option value="Furto Qualificado">Furto Qualificado</option>
+                                <option value="Tráfico de Drogas">Tráfico de Drogas</option>
+                                <option value="Porte de Drogas">Porte de Drogas</option>
+                                <option value="Porte de Arma">Porte de Arma</option>
+                                <option value="Receptação">Receptação</option>
+                                <option value="Estelionato">Estelionato</option>
+                                <option value="Extorsão">Extorsão</option>
+                                <option value="Sequêstro">Sequêstro</option>
+                                <option value="Lesão Corporal">Lesão Corporal</option>
+                                <option value="Ameaça">Ameaça</option>
+                                <option value="Violência Doméstica">Violência Doméstica</option>
+                                <option value="Dano">Dano</option>
+                                <option value="Desobediência">Desobediência</option>
+                                <option value="Desacato">Desacato</option>
+                                <option value="Resistência">Resistência</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="stack" style="margin-top:var(--space-6);">
+                        <button id="aplicar-filtros-btn" class="btn btn-primary btn-block">Buscar</button>
+                        <button id="limpar-filtros-btn" class="btn btn-secondary btn-block">Limpar Filtros</button>
+                    </div>
+                </div>
+
+                <div class="content-area">
+                    <div class="flex justify-between items-center" style="margin-bottom:var(--space-6); padding-bottom:var(--space-4); border-bottom:1px solid var(--color-border);">
+                        <h3 style="margin:0; font-size:var(--font-size-xl);">Resultados da Consulta</h3>
+                        <span id="results-count" class="badge badge-primary" style="font-size:var(--font-size-sm);">0 registros encontrados</span>
+                    </div>
+                    <div id="consulta-results" class="consulta-results-compact"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="configuracoes-tab" class="tab-content">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i data-lucide="plug" style="width:20px; height:20px;"></i> Conexão com Google Drive</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="drive-status" class="status-indicator status-disconnected" style="margin-bottom:var(--space-4);">Não conectado</div>
+                        
+                        <div class="credentials-form">
+                            <div class="form-group">
+                                <label>Client ID</label>
+                                <input type="text" id="client-id" placeholder="Seu Client ID do Google">
+                            </div>
+                            <div class="form-group">
+                                <label>API Key</label>
+                                <input type="password" id="api-key" placeholder="Sua API Key do Google">
+                            </div>
+                        </div>
+                        
+                        <button id="connect-drive-btn" class="btn btn-primary btn-block">Conectar</button>
+                        <button id="disconnect-drive-btn" class="btn btn-danger btn-block" style="display:none;">Desconectar</button>
+                        <button id="forget-credentials-btn" class="btn btn-secondary btn-block" style="display:none; margin-top:var(--space-3);">Esquecer Credenciais</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i data-lucide="book-open" style="width:20px; height:20px;"></i> Guia de Configuração</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <h4 style="margin-bottom:var(--space-3);">Passos para configurar:</h4>
+                            <ol style="margin-left:20px; color:var(--color-text-secondary); line-height:1.8;">
+                                <li>Acesse <a href="https://console.cloud.google.com" target="_blank" style="color:var(--color-primary);">Google Cloud Console</a></li>
+                                <li>Crie um novo projeto chamado "IronFace"</li>
+                                <li>Ative a "Google Drive API"</li>
+                                <li>Configure a tela de consentimento OAuth</li>
+                                <li>Crie credenciais OAuth 2.0 (Client ID)</li>
+                                <li>Crie uma API Key</li>
+                                <li>Adicione as URIs autorizadas</li>
+                                <li>Copie as credenciais no card ao lado</li>
+                            </ol>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i data-lucide="database" style="width:20px; height:20px;"></i> Banco de Dados</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success">
+                            <h4 style="margin-bottom:var(--space-2);">Como funciona:</h4>
+                            <p style="color:var(--color-text-secondary); margin-bottom:var(--space-3);">
+                                O banco de dados é armazenado no seu Google Drive pessoal na pasta <strong>IronFace_Database</strong>.
+                            </p>
+                            <ul style="color:var(--color-text-secondary); margin-left:20px; line-height:1.8;">
+                                <li>Cada cadastro é uma imagem com metadados</li>
+                                <li>Organização automática por cidade/ano/mês</li>
+                                <li>Cidade é campo obrigatório para organização</li>
+                                <li>Múltiplas abordagens geram múltiplas imagens</li>
+                                <li>Busca por CPF, Nome e outros filtros</li>
+                                <li>Acesso direto pelo Google Drive</li>
+                                <li>Backup automático do Google</li>
+                            </ul>
+                        </div>
+
+                        <div class="alert alert-info" style="margin-top:var(--space-4);">
+                            <h4 style="margin-bottom:var(--space-2); display:flex; align-items:center; gap:6px;"><i data-lucide="zap" style="width:18px; height:18px;"></i> Sistema de Cache:</h4>
+                            <p style="color:var(--color-text-secondary); margin-bottom:var(--space-3);">
+                                O sistema armazena descritores faciais processados localmente para acelerar carregamentos futuros.
+                            </p>
+                            <ul style="color:var(--color-text-secondary); margin-left:20px; line-height:1.8; margin-bottom:var(--space-3);">
+                                <li>Primeira carga: processa todas as imagens</li>
+                                <li>Próximas cargas: até 90% mais rápido</li>
+                                <li>Cache automático por imagem</li>
+                                <li>Atualiza quando imagem é modificada</li>
+                            </ul>
+                            <button id="clear-cache-btn" class="btn btn-secondary btn-block">Limpar Cache Local</button>
+                        </div>
+
+                        <div class="alert alert-warning" style="margin-top:var(--space-4);">
+                            <h4 style="margin-bottom:var(--space-2); display:flex; align-items:center; gap:6px;"><i data-lucide="alert-triangle" style="width:18px; height:18px;"></i> Importante:</h4>
+                            <ul style="color:var(--color-text-secondary); margin-left:20px; line-height:1.8;">
+                                <li>Cada usuário tem seu próprio Google Drive</li>
+                                <li>Os dados NÃO são compartilhados entre usuários</li>
+                                <li>Token de acesso expira após 1 hora</li>
+                                <li>Recomendado: usar conta Google institucional</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i data-lucide="image" style="width:20px; height:20px;"></i> Otimização de Imagens</h3>
+                    </div>
+                    <div class="card-body">
+                        <!-- Economia de Espaço -->
+                        <div style="background:linear-gradient(135deg, #00d4ff15 0%, #00ff8815 100%); border:1px solid var(--color-primary); border-radius:var(--radius-md); padding:var(--space-4); margin-bottom:var(--space-4);">
+                            <div style="display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-3);">
+                                <i data-lucide="zap" style="width:24px; height:24px; color:var(--color-primary);"></i>
+                                <div>
+                                    <h4 style="margin:0; font-size:var(--font-size-base); color:var(--color-text-primary);">Economia Automática</h4>
+                                    <p style="margin:0; font-size:var(--font-size-xs); color:var(--color-text-secondary);">Redução de até 80% no tamanho dos arquivos</p>
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-3); text-align:center;">
+                                <div style="background:var(--color-surface); padding:var(--space-3); border-radius:var(--radius-sm);">
+                                    <div style="font-size:var(--font-size-xl); font-weight:var(--font-weight-bold); color:var(--color-primary);">150KB</div>
+                                    <div style="font-size:var(--font-size-xs); color:var(--color-text-tertiary);">Tamanho máximo</div>
+                                </div>
+                                <div style="background:var(--color-surface); padding:var(--space-3); border-radius:var(--radius-sm);">
+                                    <div style="font-size:var(--font-size-xl); font-weight:var(--font-weight-bold); color:var(--color-success);">~150MB</div>
+                                    <div style="font-size:var(--font-size-xs); color:var(--color-text-tertiary);">1000 fotos</div>
+                                </div>
+                                <div style="background:var(--color-surface); padding:var(--space-3); border-radius:var(--radius-sm);">
+                                    <div style="font-size:var(--font-size-xl); font-weight:var(--font-weight-bold); color:var(--color-accent);">80%</div>
+                                    <div style="font-size:var(--font-size-xs); color:var(--color-text-tertiary);">Economia</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Enquadramento Facial -->
+                        <div style="background:var(--color-surface-elevated); border-radius:var(--radius-md); padding:var(--space-4); margin-bottom:var(--space-4);">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-3);">
+                                <div style="display:flex; align-items:center; gap:var(--space-2);">
+                                    <i data-lucide="scan-face" style="width:20px; height:20px; color:var(--color-primary);"></i>
+                                    <h4 style="margin:0; font-size:var(--font-size-base);">Enquadramento Facial Inteligente</h4>
+                                </div>
+                                <label style="display:flex; align-items:center; gap:var(--space-2); cursor:pointer;">
+                                    <input type="checkbox" id="enable-face-framing" checked style="width:18px; height:18px;">
+                                    <span style="font-size:var(--font-size-sm); font-weight:var(--font-weight-medium);">Ativado</span>
+                                </label>
+                            </div>
+                            <p style="font-size:var(--font-size-sm); color:var(--color-text-secondary); margin-bottom:var(--space-3);">
+                                Detecta e enquadra automaticamente o rosto, capturando <strong>cabelo completo e parte do peito</strong> para melhor comparação facial.
+                            </p>
+                            
+                            <div id="framing-settings">
+                                <div class="form-group" style="margin-bottom:var(--space-3);">
+                                    <label style="display:flex; align-items:center; gap:8px; margin-bottom:var(--space-2); font-size:var(--font-size-sm);">
+                                        <i data-lucide="maximize-2" style="width:16px; height:16px;"></i>
+                                        Tamanho da Foto Enquadrada
+                                    </label>
+                                    <select id="frame-size" class="form-input">
+                                        <option value="600">600×600px - Econômico (~50KB)</option>
+                                        <option value="800" selected>800×800px - Balanceado (~100KB)</option>
+                                        <option value="1024">1024×1024px - Alta Qualidade (~150KB)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-2); font-size:var(--font-size-sm);">
+                                        <span style="display:flex; align-items:center; gap:8px;">
+                                            <i data-lucide="move" style="width:16px; height:16px;"></i>
+                                            Área de Captura
+                                        </span>
+                                        <span id="margin-value" style="color:var(--color-primary); font-weight:var(--font-weight-bold); font-size:var(--font-size-base);">80%</span>
+                                    </label>
+                                    <input type="range" id="frame-margin" min="50" max="120" value="80" step="10" class="form-range" style="width:100%;">
+                                    <div style="display:flex; justify-content:space-between; font-size:var(--font-size-xs); color:var(--color-text-tertiary); margin-top:var(--space-1);">
+                                        <span>50% - Apenas rosto</span>
+                                        <span style="color:var(--color-primary); font-weight:var(--font-weight-medium);">80% - Ideal</span>
+                                        <span>120% - Contexto completo</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Configurações Avançadas -->
+                        <details style="margin-bottom:var(--space-4);">
+                            <summary style="cursor:pointer; padding:var(--space-3); background:var(--color-surface-elevated); border-radius:var(--radius-md); font-weight:var(--font-weight-medium); display:flex; align-items:center; gap:var(--space-2);">
+                                <i data-lucide="settings" style="width:18px; height:18px;"></i>
+                                Configurações Avançadas
+                            </summary>
+                            <div style="padding:var(--space-4); background:var(--color-surface); border-radius:var(--radius-md); margin-top:var(--space-2);">
+                                <div class="form-group" style="margin-bottom:var(--space-3);">
+                                    <label style="display:flex; align-items:center; gap:8px; margin-bottom:var(--space-2); font-size:var(--font-size-sm);">
+                                        <i data-lucide="maximize-2" style="width:16px; height:16px;"></i>
+                                        Dimensões Máximas (sem enquadramento)
+                                    </label>
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+                                        <div>
+                                            <label style="font-size:var(--font-size-xs); color:var(--color-text-secondary); margin-bottom:var(--space-1); display:block;">Largura (px)</label>
+                                            <input type="number" id="opt-max-width" value="1920" min="640" max="3840" step="160" class="form-input">
+                                        </div>
+                                        <div>
+                                            <label style="font-size:var(--font-size-xs); color:var(--color-text-secondary); margin-bottom:var(--space-1); display:block;">Altura (px)</label>
+                                            <input type="number" id="opt-max-height" value="1080" min="480" max="2160" step="120" class="form-input">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-2); font-size:var(--font-size-sm);">
+                                        <span style="display:flex; align-items:center; gap:8px;">
+                                            <i data-lucide="sliders" style="width:16px; height:16px;"></i>
+                                            Qualidade Inicial
+                                        </span>
+                                        <span id="quality-value" style="color:var(--color-primary); font-weight:var(--font-weight-bold); font-size:var(--font-size-base);">85%</span>
+                                    </label>
+                                    <input type="range" id="opt-quality" min="60" max="95" value="85" step="5" class="form-range" style="width:100%;">
+                                    <div style="display:flex; justify-content:space-between; font-size:var(--font-size-xs); color:var(--color-text-tertiary); margin-top:var(--space-1);">
+                                        <span>60% - Menor</span>
+                                        <span style="color:var(--color-primary); font-weight:var(--font-weight-medium);">85% - Ideal</span>
+                                        <span>95% - Máxima</span>
+                                    </div>
+                                    <div style="margin-top:var(--space-2); padding:var(--space-2); background:var(--color-background); border-radius:var(--radius-sm); font-size:var(--font-size-xs); color:var(--color-text-secondary);">
+                                        <i data-lucide="info" style="width:14px; height:14px; display:inline; margin-right:4px;"></i>
+                                        O sistema ajusta automaticamente a qualidade para manter cada imagem abaixo de 150KB
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+
+                        <!-- Presets Rápidos -->
+                        <div style="margin-bottom:var(--space-4);">
+                            <h4 style="font-size:var(--font-size-sm); margin-bottom:var(--space-2); color:var(--color-text-secondary); display:flex; align-items:center; gap:var(--space-2);">
+                                <i data-lucide="zap" style="width:16px; height:16px;"></i>
+                                Presets Rápidos
+                            </h4>
+                            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-2);">
+                                <button class="btn btn-secondary" onclick="setOptimizationPreset('economy')" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-1); padding:var(--space-3);">
+                                    <i data-lucide="leaf" style="width:20px; height:20px;"></i>
+                                    <span style="font-size:var(--font-size-xs); font-weight:var(--font-weight-medium);">Máxima Economia</span>
+                                    <span style="font-size:var(--font-size-xs); color:var(--color-text-tertiary);">600px • 75%</span>
+                                </button>
+                                <button class="btn btn-primary" onclick="setOptimizationPreset('balanced')" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-1); padding:var(--space-3);">
+                                    <i data-lucide="balance-scale" style="width:20px; height:20px;"></i>
+                                    <span style="font-size:var(--font-size-xs); font-weight:var(--font-weight-medium);">Balanceado</span>
+                                    <span style="font-size:var(--font-size-xs); opacity:0.8;">800px • 85%</span>
+                                </button>
+                                <button class="btn btn-secondary" onclick="setOptimizationPreset('quality')" style="display:flex; flex-direction:column; align-items:center; gap:var(--space-1); padding:var(--space-3);">
+                                    <i data-lucide="sparkles" style="width:20px; height:20px;"></i>
+                                    <span style="font-size:var(--font-size-xs); font-weight:var(--font-weight-medium);">Alta Qualidade</span>
+                                    <span style="font-size:var(--font-size-xs); color:var(--color-text-tertiary);">1024px • 90%</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Botão Salvar -->
+                        <button id="save-optimization-btn" class="btn btn-accent btn-block btn-lg" style="display:flex; align-items:center; justify-content:center; gap:var(--space-2);">
+                            <i data-lucide="save" style="width:20px; height:20px;"></i>
+                            Salvar Configurações
+                        </button>
+
+                        <!-- Informações do Sistema -->
+                        <div style="margin-top:var(--space-4); padding:var(--space-3); background:var(--color-background); border-radius:var(--radius-md); border-left:3px solid var(--color-primary);">
+                            <h4 style="font-size:var(--font-size-sm); margin-bottom:var(--space-2); display:flex; align-items:center; gap:var(--space-2);">
+                                <i data-lucide="cpu" style="width:16px; height:16px;"></i>
+                                Sistema de Compressão Inteligente
+                            </h4>
+                            <div style="font-size:var(--font-size-xs); color:var(--color-text-secondary); line-height:1.8;">
+                                ✓ Detecção e enquadramento facial automático<br>
+                                ✓ Tamanho máximo: 150KB por imagem<br>
+                                ✓ Ajuste automático de qualidade<br>
+                                ✓ Formato: JPEG (máxima compatibilidade)<br>
+                                ✓ 1000 fotos = ~150MB (vs 3GB sem otimização)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i data-lucide="folder-tree" style="width:20px; height:20px;"></i> Estrutura de Pastas</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <h4 style="margin-bottom:var(--space-3);">Organização no Google Drive:</h4>
+                            <pre style="background:var(--color-background); padding:var(--space-4); border-radius:var(--radius-md); overflow-x:auto; color:var(--color-text-primary); font-size:var(--font-size-xs); font-family:var(--font-family-mono); line-height:1.6;">
+IronFace_Database/
+├── Macaé/
+│   ├── 2024/
+│   │   ├── Janeiro/
+│   │   │   ├── JoaoSilva_12345678900_98765432.jpg
+│   │   │   └── MariaSantos_98765432100_12345678.jpg
+│   │   ├── Fevereiro/
+│   │   └── ...
+│   └── 2025/
+├── Rio_das_Ostras/
+│   └── 2024/
+│       └── Janeiro/
+└── ...</pre>
+                            <p style="margin-top:var(--space-3); color:var(--color-text-secondary); font-size:var(--font-size-xs);">
+                                <strong>Nota:</strong> A cidade é obrigatória e organiza os cadastros por localização. Múltiplas abordagens do mesmo indivíduo geram múltiplas imagens.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-header">
+                        <h3 style="margin:0; display:flex; align-items:center; gap:8px;"><i data-lucide="info" style="width:20px; height:20px;"></i> Sobre o Sistema</h3>
+                    </div>
+                    <div class="card-body">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-6); padding:var(--space-4);">
+                            <div>
+                                <h4 style="color:var(--color-primary); margin-bottom:var(--space-3); font-size:var(--font-size-base); display:flex; align-items:center; gap:6px;"><i data-lucide="clipboard-list" style="width:18px; height:18px;"></i> Informações do Sistema</h4>
+                                <div style="color:var(--color-text-secondary); line-height:2;">
+                                    <div><strong>Nome:</strong> IronFace</div>
+                                    <div><strong>Versão:</strong> 1.0.0</div>
+                                    <div><strong>Tipo:</strong> Sistema de Reconhecimento Facial Forense</div>
+                                    <div><strong>Tecnologia:</strong> Face-API.js + Google Drive API</div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 style="color:var(--color-primary); margin-bottom:var(--space-3); font-size:var(--font-size-base); display:flex; align-items:center; gap:6px;"><i data-lucide="user-cog" style="width:18px; height:18px;"></i> Créditos</h4>
+                                <div style="color:var(--color-text-secondary); line-height:2;">
+                                    <div><strong>Desenvolvido por:</strong> Sd PM Ferrão</div>
+                                    <div><strong>Unidade:</strong> Força Tática 32º BPM</div>
+                                    <div><strong>Finalidade:</strong> Apoio às operações policiais</div>
+                                    <div style="margin-top:var(--space-3); padding-top:var(--space-3); border-top:1px solid var(--color-border); font-size:var(--font-size-xs); color:var(--color-text-tertiary);">
+                                        © 2026 - Todos os direitos reservados
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="comparison-modal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Análise Individual</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="comparison-container">
+                    <div class="comparison-item">
+                        <div class="comparison-label">Consulta</div>
+                        <img id="modal-query" src="" alt="Consulta" class="comparison-image">
+                    </div>
+                    <div class="comparison-item">
+                        <div class="comparison-label">Resultado</div>
+                        <img id="modal-result" src="" alt="Candidato" class="comparison-image">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="metrics-grid" style="width:100%;">
+                    <div class="metric-card">
+                        <div class="metric-label">Distância Euclidiana</div>
+                        <div class="metric-value" id="modal-euclidean">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Similaridade</div>
+                        <div class="metric-value" id="modal-similarity">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="details-modal" class="modal-backdrop">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2 class="modal-title">Detalhes do Cadastro</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body modal-body-details">
+                <div class="details-layout">
+                    <div class="details-image-section">
+                        <div id="details-image" class="details-image-container">
+                            <div class="image-loading">Carregando...</div>
+                        </div>
+                        <button id="btn-copy-whatsapp" class="btn btn-accent btn-block" style="margin-top: var(--space-3); display: flex; align-items: center; justify-content: center; gap: var(--space-2);">
+                            <i data-lucide="share-2" style="width:18px; height:18px;"></i>
+                            Copiar para WhatsApp
+                        </button>
+                    </div>
+                    <div class="details-info-section">
+                        <div class="details-section">
+                            <h3 class="details-section-title">Dados Pessoais</h3>
+                            <div class="details-grid">
+                                <div class="details-field">
+                                    <span class="details-label">Nome Completo</span>
+                                    <span class="details-value" id="details-nome" style="display:flex; align-items:center; gap:8px;">
+                                        <span id="details-nome-text">-</span>
+                                        <button class="btn-copy-field" data-copy-target="details-nome-text" style="display:none;">
+                                            <i data-lucide="copy" style="width:14px; height:14px;"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Alcunha</span>
+                                    <span class="details-value" id="details-alcunha">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">CPF</span>
+                                    <span class="details-value" id="details-cpf" style="display:flex; align-items:center; gap:8px;">
+                                        <span id="details-cpf-text">-</span>
+                                        <button class="btn-copy-field" data-copy-target="details-cpf-text" style="display:none;">
+                                            <i data-lucide="copy" style="width:14px; height:14px;"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">RG</span>
+                                    <span class="details-value" id="details-rg" style="display:flex; align-items:center; gap:8px;">
+                                        <span id="details-rg-text">-</span>
+                                        <button class="btn-copy-field" data-copy-target="details-rg-text" style="display:none;">
+                                            <i data-lucide="copy" style="width:14px; height:14px;"></i>
+                                        </button>
+                                    </span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Data de Nascimento</span>
+                                    <span class="details-value" id="details-nascimento">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Filiação - Mãe</span>
+                                    <span class="details-value" id="details-mae">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Filiação - Pai</span>
+                                    <span class="details-value" id="details-pai">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="details-section">
+                            <h3 class="details-section-title">Endereço</h3>
+                            <div class="details-grid">
+                                <div class="details-field">
+                                    <span class="details-label">Endereço</span>
+                                    <span class="details-value" id="details-endereco">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Cidade/Estado</span>
+                                    <span class="details-value" id="details-cidade">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">CEP</span>
+                                    <span class="details-value" id="details-cep">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="details-section">
+                            <h3 class="details-section-title">Características Físicas</h3>
+                            <div class="details-grid">
+                                <div class="details-field">
+                                    <span class="details-label">Altura</span>
+                                    <span class="details-value" id="details-altura">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Cor da Pele</span>
+                                    <span class="details-value" id="details-cor-pele">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Cor dos Olhos</span>
+                                    <span class="details-value" id="details-cor-olhos">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Tatuagens</span>
+                                    <span class="details-value" id="details-tatuagens">-</span>
+                                </div>
+                                <div class="details-field details-field-full">
+                                    <span class="details-label">Sinais Particulares</span>
+                                    <span class="details-value" id="details-sinais">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="details-section">
+                            <h3 class="details-section-title">Dados da Abordagem</h3>
+                            <div class="details-grid">
+                                <div class="details-field">
+                                    <span class="details-label">Data da Abordagem</span>
+                                    <span class="details-value" id="details-data-abordagem">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Local da Abordagem</span>
+                                    <span class="details-value" id="details-local-abordagem">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Local do Cadastro</span>
+                                    <span class="details-value" id="details-local-cadastro">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Policial Responsável</span>
+                                    <span class="details-value" id="details-policial">-</span>
+                                </div>
+                                <div class="details-field details-field-full">
+                                    <span class="details-label">Observações</span>
+                                    <span class="details-value" id="details-observacoes">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Data do Cadastro</span>
+                                    <span class="details-value" id="details-data-cadastro">-</span>
+                                </div>
+                                <div class="details-field">
+                                    <span class="details-label">Histórico Criminal</span>
+                                    <span class="details-value" id="details-tags">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="details-drive-link" href="#" target="_blank" class="btn btn-primary">Abrir no Google Drive</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="image-modal" class="modal-backdrop">
+        <div class="modal" style="max-width:90vw;">
+            <div class="modal-header">
+                <h2 class="modal-title">Visualização da Imagem</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" style="min-height:400px; display:flex; align-items:center; justify-content:center;">
+                <div id="modal-loading" style="color:var(--color-text-secondary);">Carregando imagem...</div>
+                <img id="modal-image" src="" alt="Imagem do cadastro" style="display:none; max-width:100%; max-height:80vh; object-fit:contain;">
+            </div>
+        </div>
+    </div>
+
+    <script src="js/tabs.js"></script>
+    <script type="module" src="js/google-drive.js"></script>
+    <script src="js/app-faceapi.js"></script>
+    <script src="js/cadastro.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // Gerenciamento de otimização de imagens
+        function loadOptimizationSettings() {
+            const maxWidth = localStorage.getItem('opt_max_width') || '1920';
+            const maxHeight = localStorage.getItem('opt_max_height') || '1080';
+            const quality = localStorage.getItem('opt_quality') || '85';
+            const enableFraming = localStorage.getItem('enable_face_framing') !== 'false';
+            const frameSize = localStorage.getItem('frame_size') || '800';
+            const frameMargin = localStorage.getItem('frame_margin') || '80'; // Padrão 80%
+            
+            document.getElementById('opt-max-width').value = maxWidth;
+            document.getElementById('opt-max-height').value = maxHeight;
+            document.getElementById('opt-quality').value = quality;
+            document.getElementById('quality-value').textContent = quality + '%';
+            document.getElementById('enable-face-framing').checked = enableFraming;
+            document.getElementById('frame-size').value = frameSize;
+            document.getElementById('frame-margin').value = frameMargin;
+            document.getElementById('margin-value').textContent = frameMargin + '%';
+            
+            // Mostrar/ocultar configurações de enquadramento
+            document.getElementById('framing-settings').style.display = enableFraming ? 'block' : 'none';
+            
+            // Atualizar o otimizador se já estiver inicializado
+            if (window.driveManager && window.driveManager.imageOptimizer) {
+                driveManager.imageOptimizer.maxWidth = parseInt(maxWidth);
+                driveManager.imageOptimizer.maxHeight = parseInt(maxHeight);
+                driveManager.imageOptimizer.quality = parseInt(quality) / 100;
+                driveManager.imageOptimizer.enableFaceFraming = enableFraming;
+                driveManager.imageOptimizer.faceFraming.targetSize = parseInt(frameSize);
+                driveManager.imageOptimizer.faceFraming.margin = parseInt(frameMargin) / 100;
+            }
+        }
+
+        function setOptimizationPreset(preset) {
+            let width, height, quality, frameSize, frameMargin;
+            
+            switch(preset) {
+                case 'economy':
+                    width = 1280;
+                    height = 720;
+                    quality = 75;
+                    frameSize = 600;
+                    frameMargin = 70;
+                    break;
+                case 'balanced':
+                    width = 1920;
+                    height = 1080;
+                    quality = 85;
+                    frameSize = 800;
+                    frameMargin = 80;
+                    break;
+                case 'quality':
+                    width = 2560;
+                    height = 1440;
+                    quality = 90;
+                    frameSize = 1024;
+                    frameMargin = 100;
+                    break;
+            }
+            
+            document.getElementById('opt-max-width').value = width;
+            document.getElementById('opt-max-height').value = height;
+            document.getElementById('opt-quality').value = quality;
+            document.getElementById('quality-value').textContent = quality + '%';
+            document.getElementById('frame-size').value = frameSize;
+            document.getElementById('frame-margin').value = frameMargin;
+            document.getElementById('margin-value').textContent = frameMargin + '%';
+            
+            // Feedback visual
+            const presetNames = {
+                'economy': 'Máxima Economia',
+                'balanced': 'Balanceado',
+                'quality': 'Alta Qualidade'
+            };
+            
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: var(--color-surface-elevated);
+                color: var(--color-text-primary);
+                padding: var(--space-3) var(--space-4);
+                border-radius: var(--radius-md);
+                border: 1px solid var(--color-primary);
+                box-shadow: var(--shadow-lg);
+                z-index: 10000;
+                animation: fadeIn 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: var(--space-2);
+            `;
+            toast.innerHTML = `
+                <i data-lucide="check-circle" style="width:18px; height:18px; color:var(--color-success);"></i>
+                <span>Preset "${presetNames[preset]}" aplicado!</span>
+            `;
+            document.body.appendChild(toast);
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        // Event listeners
+        document.getElementById('opt-quality')?.addEventListener('input', (e) => {
+            document.getElementById('quality-value').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('frame-margin')?.addEventListener('input', (e) => {
+            const value = e.target.value;
+            document.getElementById('margin-value').textContent = value + '%';
+        });
+
+        document.getElementById('enable-face-framing')?.addEventListener('change', (e) => {
+            const framingSettings = document.getElementById('framing-settings');
+            if (e.target.checked) {
+                framingSettings.style.display = 'block';
+                framingSettings.style.animation = 'fadeIn 0.3s ease';
+            } else {
+                framingSettings.style.display = 'none';
+            }
+        });
+
+        document.getElementById('save-optimization-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('save-optimization-btn');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader" style="width:20px; height:20px; animation: spin 1s linear infinite;"></i> Salvando...';
+            lucide.createIcons();
+            
+            const maxWidth = document.getElementById('opt-max-width').value;
+            const maxHeight = document.getElementById('opt-max-height').value;
+            const quality = document.getElementById('opt-quality').value;
+            const enableFraming = document.getElementById('enable-face-framing').checked;
+            const frameSize = document.getElementById('frame-size').value;
+            const frameMargin = document.getElementById('frame-margin').value;
+            
+            localStorage.setItem('opt_max_width', maxWidth);
+            localStorage.setItem('opt_max_height', maxHeight);
+            localStorage.setItem('opt_quality', quality);
+            localStorage.setItem('enable_face_framing', enableFraming);
+            localStorage.setItem('frame_size', frameSize);
+            localStorage.setItem('frame_margin', frameMargin);
+            
+            // Recriar o otimizador com novas configurações
+            if (window.driveManager) {
+                const { ImageOptimizer } = await import('./js/image-optimizer.js');
+                driveManager.imageOptimizer = new ImageOptimizer({
+                    maxWidth: parseInt(maxWidth),
+                    maxHeight: parseInt(maxHeight),
+                    quality: parseInt(quality) / 100,
+                    maxFileSize: 150 * 1024,
+                    enableFaceFraming: enableFraming,
+                    frameSize: parseInt(frameSize),
+                    frameMargin: parseInt(frameMargin) / 100
+                });
+                console.log('Otimizador atualizado:', {
+                    maxWidth: parseInt(maxWidth),
+                    maxHeight: parseInt(maxHeight),
+                    quality: parseInt(quality) / 100,
+                    maxFileSize: '150KB',
+                    faceFraming: enableFraming ? `${frameSize}x${frameSize}px (margem ${frameMargin}%)` : 'desativado'
+                });
+            }
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+                lucide.createIcons();
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Configurações Salvas!',
+                    html: `
+                        <div style="text-align:left; padding:var(--space-3);">
+                            <div style="margin-bottom:var(--space-2);"><strong>📐 Dimensões:</strong> ${maxWidth}×${maxHeight}px</div>
+                            <div style="margin-bottom:var(--space-2);"><strong>🎨 Qualidade Inicial:</strong> ${quality}%</div>
+                            <div style="margin-bottom:var(--space-2);"><strong>🎯 Enquadramento:</strong> ${enableFraming ? `Ativado (${frameSize}×${frameSize}px, margem ${frameMargin}%)` : 'Desativado'}</div>
+                            <div style="margin-bottom:var(--space-2);"><strong>💾 Tamanho Máximo:</strong> 150KB</div>
+                            <div style="margin-top:var(--space-3); padding-top:var(--space-3); border-top:1px solid rgba(255,255,255,0.1); font-size:var(--font-size-sm); color:var(--color-text-secondary);">
+                                ✓ Sistema ajustará automaticamente a qualidade<br>
+                                ✓ Todas as imagens serão otimizadas no upload
+                            </div>
+                        </div>
+                    `,
+                    background: '#1a1a1a',
+                    color: '#e0e0e0',
+                    confirmButtonColor: '#00d4ff',
+                    confirmButtonText: 'Entendi'
+                });
+            }, 500);
+        });
+
+        // Carregar configurações ao iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadOptimizationSettings();
+        });
+
+        // Tornar função global
+        window.setOptimizationPreset = setOptimizationPreset;
+
+        // Gerenciamento de cache
+        document.getElementById('clear-cache-btn')?.addEventListener('click', () => {
+            Swal.fire({
+                title: 'Limpar Cache?',
+                html: `
+                    <p style="margin-bottom: var(--space-3);">Isso irá remover todos os descritores faciais armazenados localmente.</p>
+                    <p style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">O próximo carregamento do banco de dados será mais lento, mas o cache será reconstruído automaticamente.</p>
+                `,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, limpar cache',
+                cancelButtonText: 'Cancelar',
+                background: '#1a1a1a',
+                color: '#e0e0e0',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (window.driveManager) {
+                        window.driveManager.clearAllCache();
+                    }
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Cache Limpo!',
+                        text: 'Todos os descritores em cache foram removidos.',
+                        background: '#1a1a1a',
+                        color: '#e0e0e0',
+                        confirmButtonColor: '#00d4ff',
+                        timer: 2000
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
