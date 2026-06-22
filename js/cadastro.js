@@ -1430,6 +1430,9 @@ class CadastroManager {
             color: '#e0e0e0',
             confirmButtonColor: '#00d4ff',
             cancelButtonColor: '#6c757d',
+            customClass: {
+                container: 'swal-high-z'
+            },
             preConfirm: () => {
                 return {
                     includeHistorico: document.getElementById('include-historico')?.checked || false

@@ -99,6 +99,12 @@
   --z-modal: 1400;
   --z-popover: 1500;
   --z-tooltip: 1600;
+  --z-sweetalert: 10000;
+}
+
+/* SweetAlert2 z-index override */
+.swal-high-z {
+  z-index: 10000 !important;
 }
 
 /* Reset & Base Styles */
